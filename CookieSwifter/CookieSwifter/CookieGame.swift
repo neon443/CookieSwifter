@@ -72,14 +72,19 @@ class CookieGame: ObservableObject {
 	}
 
 	init() {
+		//FLAG: DONT REMOVE
+		//im so stupid
+		startTimer()
 		loadSavedGames()
 	}
 
 	func startTimer() {
 		if timer == nil {
 			timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-				self.cookies += self.cps
-				self.checkAchievements()
+				DispatchQueue.main.async {
+					self.cookies += self.cps
+					self.checkAchievements()
+				}
 			}
 		}
 	}
@@ -110,13 +115,19 @@ class CookieGame: ObservableObject {
 			for i in items.indices {
 				items[i].cps *= 2
 			}
+			cps = items.reduce(0) { $0 + $1.cps * $1.count }
 		} else if upgrade.appliesTo == "Temporary" {
 			DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
 				self.cps /= 3
 			}
 			cps *= 3
 		} else if let itemIndex = items.firstIndex(where: { $0.name == upgrade.appliesTo }) {
-			items[itemIndex].cps = Int(Double(items[itemIndex].cps) * (upgrade.name.contains("Efficiency") ? 1.5 : 2))
+			var item = items[itemIndex]
+			if upgrade.name.contains("Efficien") {
+				item.cps = Int(Double(item.cps) * 1.5)
+			} else {
+				item.cps *= 2
+			}
 		}
 
 		cookies -= upgrade.cost
