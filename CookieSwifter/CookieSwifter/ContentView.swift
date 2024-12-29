@@ -18,13 +18,6 @@ struct ContentView: View {
 	var body: some View {
 		VStack {
 			HStack {
-				Text("Game Name")
-					.font(.caption)
-					.bold()
-				TextField("", text: $gameName)
-					.textFieldStyle(RoundedBorderTextFieldStyle())
-			}
-			HStack {
 				Text("\(game.cookies)")
 					.font(.largeTitle)
 					.fontWeight(.bold)
@@ -47,7 +40,6 @@ struct ContentView: View {
 					ScrollView(.vertical) {
 						ItemsListView(game: game, buyQuantity: $buyQuantity)
 					}
-//					Spacer()
 				} label: {
 					Image(systemName: "star.fill")
 					Text("Items")
@@ -63,24 +55,19 @@ struct ContentView: View {
 				}
 				
 				Tab {
-					HStack {
-						VStack {
-							Button("Save Game") {
-								let saveDate = "Saved \(Date().formatted())"
-								game.saveGame(name: gameName+saveDate)
-							}
-							.padding()
-							.background(Color.green)
-							.foregroundColor(.white)
-							.cornerRadius(10)
-							
-							Button("Load Game") {
-								showSavedGames = true
-							}
-							.padding()
-							.background(Color.blue)
-							.foregroundColor(.white)
-							.cornerRadius(10)
+					List {
+						Text("Game Name")
+							.font(.caption)
+							.bold()
+						TextField("", text: $gameName)
+							.textFieldStyle(RoundedBorderTextFieldStyle())
+						Button("Save Game") {
+							let saveDate = "Saved \(Date().formatted())"
+							game.saveGame(name: gameName+saveDate)
+						}
+						
+						Button("Load Game") {
+							showSavedGames = true
 						}
 						.sheet(isPresented: $showSavedGames) {
 							SavedGamesListView(game: game, selectedSave: $selectedSave)
@@ -90,16 +77,7 @@ struct ContentView: View {
 								game.loadGame(named: saveName)
 							}
 						}
-						
-						Spacer()
-						
-						VStack {
-							CookieTapView(game: game)
-							Text("CPS: \(game.cps)")
-								.font(.headline)
-						}
 					}
-
 				} label: {
 					Image(systemName: "gear")
 					Text("Settings")
@@ -108,11 +86,12 @@ struct ContentView: View {
 					ScrollView(.vertical) {
 						AchievementsView(achievements: game.achievements)
 					}
+					
 				} label: {
 					Image(systemName: "trophy.fill")
-						.badge(game.achievements.count)
 					Text("hi")
 				}
+				.badge(game.achievements.count)
 			}
 		}
 	}
@@ -184,7 +163,7 @@ struct ItemsListView: View {
 		.padding(.horizontal, 5)
 		VStack {
 			ForEach(game.items.indices, id: \.self) { index in
-				ItemView(game: game, buyQuantity: buyQuantity, index: index)
+				ItemView(game: game, buyQuantity: $buyQuantity, index: index)
 			}
 		}
 	}
@@ -192,26 +171,30 @@ struct ItemsListView: View {
 
 struct ItemView: View {
 	@ObservedObject var game: CookieGame
-	@State var buyQuantity: Int
+	@Binding var buyQuantity: Int
 	@State var index: Int
 	
 	var body: some View {
+		let canBuy = !(game.cookies < game.totalCost(of: index, quantity: buyQuantity))
+		let thisItem = game.items[index]
 		HStack(spacing: 5) {
 			Button(action: {
 				game.buyItem(at: index, quantity: buyQuantity)
 			}) {
 				HStack {
-					Text("\(game.items[index].count) x \(game.items[index].name)")
+					Text("\(thisItem.count) x")
+					Text("\(thisItem.name)")
 						.bold()
+					Text("🍪\(thisItem.cps) per second")
 					Spacer()
-					Text("🍪 \(game.totalCost(of: index, quantity: buyQuantity))")
-						.font(.caption2)
+					Text("🍪\(game.totalCost(of: index, quantity: buyQuantity))")
+						.font(.caption)
 				}
 				.padding(5)
-				.background(Color.blue.opacity(0.2))
+				.background(Color.blue.opacity(canBuy ? 0.5 : 0.2))
 				.cornerRadius(10)
 			}
-			.disabled(game.cookies < game.totalCost(of: index, quantity: buyQuantity))
+			.disabled(!canBuy)
 			SellButton(
 				game: game,
 				index: $index,
@@ -227,15 +210,17 @@ struct SellButton: View {
 	@Binding var buyQuantity: Int
 	
 	var body: some View {
+		let canSell = !(game.items[index].count < buyQuantity)
 		Button(action: {
 			game.sellItem(at: index, quantity: buyQuantity)
 		}) {
-			Text("🍪 \(game.totalCost(of: index, quantity: buyQuantity) / 2)")
+			Text("🍪\(game.totalCost(of: index, quantity: buyQuantity) / 2)")
 				.padding(5)
-				.background(Color.red.opacity(0.2))
+				.background(Color.red.opacity(canSell ? 0.5 : 0.2))
 				.cornerRadius(10)
+				.font(.caption)
 		}
-		.disabled(game.items[index].count < buyQuantity)
+		.disabled(!canSell)
 	}
 }
 
@@ -245,21 +230,20 @@ struct UpgradesListView: View {
 	
 	var body: some View {
 		VStack(spacing: 10) {
-			Text("Upgrades")
-				.font(.footnote)
 			ForEach(game.upgrades.indices, id: \.self) { index in
+				let thisUpgrade = game.upgrades[index]
 				Button(action: {
 					game.purchaseUpgrade(at: index)
 				}) {
 					HStack {
-						Text(game.upgrades[index].name)
+						Text(thisUpgrade.name)
 							.bold()
-						Text(game.upgrades[index].description)
+						Text(thisUpgrade.description)
 						Spacer()
-						Text("🍪 \(game.upgrades[index].cost)")
+						Text("🍪\(thisUpgrade.cost)")
 					}
 					.padding(5)
-					.background(game.upgrades[index].isPurchased ? Color.green.opacity(0.2) : Color.gray.opacity(0.2))
+					.background(thisUpgrade.isPurchased ? Color.green.opacity(0.2) : Color.gray.opacity(0.2))
 					.cornerRadius(10)
 				}
 				.disabled(game.cookies < game.upgrades[index].cost || game.upgrades[index].isPurchased)
