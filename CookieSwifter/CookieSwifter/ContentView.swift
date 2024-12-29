@@ -89,7 +89,7 @@ struct ContentView: View {
 					
 				} label: {
 					Image(systemName: "trophy.fill")
-					Text("hi")
+					Text("Achievements")
 				}
 				.badge(game.achievements.count)
 			}
