@@ -1,5 +1,5 @@
 //
-//  GameManager.swift
+//  CookieGame.swift
 //  CookieSwifter
 //
 //  Created by Nihaal Sharma on 16/12/2024.
@@ -99,6 +99,7 @@ class CookieGame: ObservableObject {
 	}
 
 	func sellItem(at index: Int, quantity: Int) {
+		print("selling \(quantity) of \(index) which is \(items[index ])")
 		guard items[index].count >= quantity else { return }
 
 		items[index].count -= quantity

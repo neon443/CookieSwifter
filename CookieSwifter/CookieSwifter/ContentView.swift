@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-	@ObservedObject var gameManager: CookieGame
+	@ObservedObject var game: CookieGame
 	@State private var selectedSave: String? = nil
 	@State private var showSavedGames: Bool = false
 	@State private var buyQuantity: Int = 1
@@ -16,10 +16,7 @@ struct ContentView: View {
 	@State var showAchievemetns: Bool = false
 	
 	var body: some View {
-		VStack(spacing: 10) {
-			Text("\(gameManager.cookies)")
-				.font(.largeTitle)
-				.fontWeight(.bold)
+		VStack {
 			HStack {
 				Text("Game Name")
 					.font(.caption)
@@ -27,75 +24,108 @@ struct ContentView: View {
 				TextField("", text: $gameName)
 					.textFieldStyle(RoundedBorderTextFieldStyle())
 			}
-			.padding(.horizontal)
-			
-			Picker("Buy", selection: $buyQuantity) {
-				ForEach([1, 10, 100], id: \.self) { option in
-					Text("\(option)").tag(option)
-				}
-			}
-			.pickerStyle(SegmentedPickerStyle())
-			.padding(.horizontal)
-			.padding(.top)
-			ItemsListView(gameManager: gameManager, buyQuantity: $buyQuantity)
-			UpgradesListView(gameManager: gameManager)
-			
-			Spacer()
 			HStack {
-				VStack {
-					Button("Save Game") {
-						let saveDate = "Saved \(Date().formatted())"
-						gameManager.saveGame(name: gameName+saveDate)
-					}
-					.padding()
-					.background(Color.green)
-					.foregroundColor(.white)
-					.cornerRadius(10)
-					
-					Button("Load Game") {
-						showSavedGames = true
-					}
-					.padding()
-					.background(Color.blue)
-					.foregroundColor(.white)
-					.cornerRadius(10)
-				}
-				.sheet(isPresented: $showSavedGames) {
-					SavedGamesListView(gameManager: gameManager, selectedSave: $selectedSave)
-				}
-				.onChange(of: selectedSave) { newValue in
-					if let saveName = newValue {
-						gameManager.loadGame(named: saveName)
-					}
-				}
-				
+				Text("\(game.cookies)")
+					.font(.largeTitle)
+					.fontWeight(.bold)
 				Spacer()
-				
 				VStack {
-					CookieTapView(gameManager: gameManager)
-					Text("CPS: \(gameManager.cps)")
+					CookieTapView(game: game)
+					Text("CPS: \(game.cps)")
 						.font(.headline)
 				}
-				Spacer()
-				
-				AchievementButton(
-					gameManager: gameManager,
-					showAchievements: $showAchievemetns
-				)
 			}
-			.padding(.horizontal)
+			TabView {
+				Tab {
+					Picker("Buy", selection: $buyQuantity) {
+						ForEach([1, 10, 100], id: \.self) { option in
+							Text("\(option)").tag(option)
+						}
+					}
+					.pickerStyle(SegmentedPickerStyle())
+					.padding(.top)
+					ScrollView(.vertical) {
+						ItemsListView(game: game, buyQuantity: $buyQuantity)
+					}
+//					Spacer()
+				} label: {
+					Image(systemName: "star.fill")
+					Text("Items")
+				}
+				
+				Tab {
+					ScrollView(.vertical) {
+						UpgradesListView(game: game)
+					}
+				} label: {
+					Image(systemName: "wand.and.stars")
+					Text("Upgrades")
+				}
+				
+				Tab {
+					HStack {
+						VStack {
+							Button("Save Game") {
+								let saveDate = "Saved \(Date().formatted())"
+								game.saveGame(name: gameName+saveDate)
+							}
+							.padding()
+							.background(Color.green)
+							.foregroundColor(.white)
+							.cornerRadius(10)
+							
+							Button("Load Game") {
+								showSavedGames = true
+							}
+							.padding()
+							.background(Color.blue)
+							.foregroundColor(.white)
+							.cornerRadius(10)
+						}
+						.sheet(isPresented: $showSavedGames) {
+							SavedGamesListView(game: game, selectedSave: $selectedSave)
+						}
+						.onChange(of: selectedSave) { newValue in
+							if let saveName = newValue {
+								game.loadGame(named: saveName)
+							}
+						}
+						
+						Spacer()
+						
+						VStack {
+							CookieTapView(game: game)
+							Text("CPS: \(game.cps)")
+								.font(.headline)
+						}
+					}
+
+				} label: {
+					Image(systemName: "gear")
+					Text("Settings")
+				}
+				Tab {
+					ScrollView(.vertical) {
+						AchievementsView(achievements: game.achievements)
+					}
+				} label: {
+					Image(systemName: "trophy.fill")
+						.badge(game.achievements.count)
+					Text("hi")
+				}
+			}
 		}
 	}
 }
 
 struct SavedGamesListView: View {
-	@ObservedObject var gameManager: CookieGame
+	@ObservedObject var game: CookieGame
 	@Binding var selectedSave: String?
 	
 	var body: some View {
 		NavigationView {
 			List {
-				ForEach(gameManager.savedGames, id: \ .name) { save in
+				ForEach(game.savedGames, id: \ .name) { save in
 					HStack {
 						VStack(alignment: .leading) {
 							Text(save.name).font(.headline)
@@ -113,7 +143,7 @@ struct SavedGamesListView: View {
 					}
 				}
 				.onDelete { indexSet in
-					indexSet.map { gameManager.savedGames[$0].name }.forEach(gameManager.deleteGame(named:))
+					indexSet.map { game.savedGames[$0].name }.forEach(game.deleteGame(named:))
 				}
 			}
 			.navigationTitle("Saved Games")
@@ -122,13 +152,13 @@ struct SavedGamesListView: View {
 }
 
 struct CookieTapView: View {
-	@ObservedObject var gameManager: CookieGame
+	@ObservedObject var game: CookieGame
 	
 	var body: some View {
-		VStack(spacing: 10) {
+		VStack {
 			Button(action: {
-				gameManager.cookies += 1
-				gameManager.checkAchievements()
+				game.cookies += 1
+				game.checkAchievements()
 			}) {
 				Text("🍪")
 					.font(.system(size: 75))
@@ -137,7 +167,7 @@ struct CookieTapView: View {
 	}
 }
 struct ItemsListView: View {
-	@ObservedObject var gameManager: CookieGame
+	@ObservedObject var game: CookieGame
 	@Binding var buyQuantity: Int
 	
 	var body: some View {
@@ -152,122 +182,92 @@ struct ItemsListView: View {
 				.font(.footnote)
 		}
 		.padding(.horizontal, 5)
-		VStack(spacing: 10) {
-			ForEach(gameManager.items.indices, id: \.self) { index in
-				HStack(spacing: 10) {
-					Button(action: {
-						gameManager.buyItem(at: index, quantity: buyQuantity)
-					}) {
-						HStack {
-							Text("\(gameManager.items[index].count) x \(gameManager.items[index].name)")
-							Spacer()
-							Text("🍪 \(gameManager.totalCost(of: index, quantity: buyQuantity))")
-								.font(.caption2)
-						}
-						.padding(5)
-						.background(Color.blue.opacity(0.2))
-						.cornerRadius(10)
-					}
-					.disabled(gameManager.cookies < gameManager.totalCost(of: index, quantity: buyQuantity))
-					//					if gameManager.cookies < gameManager.totalCost(of: index, quantity: buyQuantity) {
-					//						Gauge(
-					//							value: gameManager.cookies,
-					//							in: 1..<gameManager
-					//								.totalCost(of: index, quantity: buyQuantity),
-					//							label: Text("d")
-					//						)
-					//					}
-					
-					SellButton(
-						gameManager: gameManager,
-						index: index,
-						buyQuantity: buyQuantity
-					)
-				}
+		VStack {
+			ForEach(game.items.indices, id: \.self) { index in
+				ItemView(game: game, buyQuantity: buyQuantity, index: index)
 			}
 		}
 	}
 }
-struct SellButton: View {
-	@ObservedObject var gameManager: CookieGame
-	@State var index: Int
+
+struct ItemView: View {
+	@ObservedObject var game: CookieGame
 	@State var buyQuantity: Int
+	@State var index: Int
+	
+	var body: some View {
+		HStack(spacing: 5) {
+			Button(action: {
+				game.buyItem(at: index, quantity: buyQuantity)
+			}) {
+				HStack {
+					Text("\(game.items[index].count) x \(game.items[index].name)")
+						.bold()
+					Spacer()
+					Text("🍪 \(game.totalCost(of: index, quantity: buyQuantity))")
+						.font(.caption2)
+				}
+				.padding(5)
+				.background(Color.blue.opacity(0.2))
+				.cornerRadius(10)
+			}
+			.disabled(game.cookies < game.totalCost(of: index, quantity: buyQuantity))
+			SellButton(
+				game: game,
+				index: $index,
+				buyQuantity: $buyQuantity
+			)
+		}
+	}
+}
+
+struct SellButton: View {
+	@ObservedObject var game: CookieGame
+	@Binding var index: Int
+	@Binding var buyQuantity: Int
 	
 	var body: some View {
 		Button(action: {
-			gameManager.sellItem(at: index, quantity: buyQuantity)
+			game.sellItem(at: index, quantity: buyQuantity)
 		}) {
-			Text("🍪 \(gameManager.totalCost(of: index, quantity: buyQuantity) / 2)")
+			Text("🍪 \(game.totalCost(of: index, quantity: buyQuantity) / 2)")
 				.padding(5)
 				.background(Color.red.opacity(0.2))
 				.cornerRadius(10)
 		}
-		.disabled(gameManager.items[index].count < buyQuantity)
+		.disabled(game.items[index].count < buyQuantity)
 	}
 }
+
+
 struct UpgradesListView: View {
-	@ObservedObject var gameManager: CookieGame
+	@ObservedObject var game: CookieGame
 	
 	var body: some View {
 		VStack(spacing: 10) {
 			Text("Upgrades")
 				.font(.footnote)
-			ForEach(gameManager.upgrades.indices, id: \.self) { index in
+			ForEach(game.upgrades.indices, id: \.self) { index in
 				Button(action: {
-					gameManager.purchaseUpgrade(at: index)
+					game.purchaseUpgrade(at: index)
 				}) {
 					HStack {
-						Text(gameManager.upgrades[index].name)
-						Text(gameManager.upgrades[index].description)
+						Text(game.upgrades[index].name)
+							.bold()
+						Text(game.upgrades[index].description)
 						Spacer()
-						Text("🍪 \(gameManager.upgrades[index].cost)")
+						Text("🍪 \(game.upgrades[index].cost)")
 					}
 					.padding(5)
-					.background(gameManager.upgrades[index].isPurchased ? Color.green.opacity(0.2) : Color.gray.opacity(0.2))
+					.background(game.upgrades[index].isPurchased ? Color.green.opacity(0.2) : Color.gray.opacity(0.2))
 					.cornerRadius(10)
 				}
-				.disabled(gameManager.cookies < gameManager.upgrades[index].cost || gameManager.upgrades[index].isPurchased)
+				.disabled(game.cookies < game.upgrades[index].cost || game.upgrades[index].isPurchased)
 			}
-		}
-	}
-}
-struct AchievementButton: View {
-	@ObservedObject var gameManager: CookieGame
-	@Binding var showAchievements: Bool
-	
-	var body: some View {
-		VStack(spacing: 10) {
-			Button(action: {
-				showAchievements.toggle()
-			}) {
-				Text("\(gameManager.achievements.count) Achievements")
-					.font(.title3)
-					.padding(5)
-					.background(Color.purple.opacity(0.2))
-					.cornerRadius(10)
-			}
-			.sheet(isPresented: $showAchievements) {
-				AchievementsView(achievements: gameManager.achievements)
-			}
-		}
-	}
-}
-struct AchievementsView: View {
-	let achievements: [Achievement]
-	
-	var body: some View {
-		NavigationView {
-			List(achievements, id: \.title) { achievement in
-				VStack(alignment: .leading) {
-					Text(achievement.title)
-						.font(.headline)
-					Text(achievement.description)
-						.font(.subheadline)
-						.foregroundColor(.gray)
-				}
-			}
-			.navigationTitle("Achievements")
 		}
 	}
 }
 
+#Preview {
+	ContentView(game: CookieGame(), gameName: "Preview Bakery")
+}

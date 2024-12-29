@@ -13,7 +13,7 @@ struct CookieSwifterApp: App {
     var body: some Scene {
         WindowGroup {
 			ContentView(
-				gameManager: CookieGame(),
+				game: CookieGame(),
 				gameName: (listOfNames.randomElement() ?? "Bob") + "'s Bakery"
 			)
         }
